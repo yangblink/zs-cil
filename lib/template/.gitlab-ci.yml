@@ -1,0 +1,118 @@
+variables:
+  # 项目构建路径
+  BUILD_PATH: '<%= BUILD_PATH %>'
+  # 150上D/web相对路径
+  DEPLOY_WINDOWS_150_PATH: '<%= DEPLOY_WINDOWS_150_PATH %>'
+  # 阿里云101部署路径
+  DEPLOY_ALIYUN_101_PATH: '<%= DEPLOY_ALIYUN_101_PATH %>'
+  # 机器人webhook地址 参考群聊机器人
+  ROBOT_URL: '<%= ROBOT_URL %>'
+  # 项目的测试地址
+  PROJECT_DIR: '<%= PROJECT_DIR %>'
+  # 机器人发送的信息 这里使用commit提交的内容
+  DEPLOY_MSG: $CI_COMMIT_MESSAGE
+
+stages:
+  # 构建
+  - build_dev
+  # 部署
+  - deploy
+  # 群聊机器人
+  - report
+
+# 构建任务
+build_dev:
+  stage: build_dev
+  cache:
+    paths:
+      # 缓存目录
+      - node_modules
+  tags:
+    # 使用的runner 可以在 项目设置里找到 Setting -> CI/CD -> Runners settings 中
+    - node-runner
+  only:
+    # 触发构建的分支 【【根据项目修改】】
+    - develop
+  script:
+    # 修改npm源为公司源
+    - npm install --registry=http://pkgs.istrongcloud.net/npm/registry/
+    # 构建命令【【根据项目修改】】
+    - npm run build
+  # 构建出来的文件，发布的时候需要使用
+  artifacts:
+    paths:
+    # 构建目录【【根据项目修改】】
+    - $BUILD_PATH
+
+# windows_150部署任务
+deploy_to_150:
+  stage: deploy
+  image: linuxserver/openssh-server:version-8.4_p1-r3
+  # 依赖的job，获取该job下的 artifacts 文件
+  dependencies:
+    - build_dev
+  tags:
+    - ssh-runner
+  only:
+    refs:
+      - develop
+    variables:
+      - $DEPLOY_WINDOWS_150_PATH =~ /.{3}/
+  before_script:
+    # set ssh private key
+    - 'which ssh-agent || ( apt-get update -qy && apt-get install openssh-client -qqy )'
+    - eval $(ssh-agent -s) && ssh-add <(echo "$SFTP_150") && mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  script:
+    # 拷贝文件到远程服务器
+    - |
+      sftp -P 4401 istrong@192.168.1.150 <<EOF
+      cd $DEPLOY_WINDOWS_150_PATH
+      lcd $BUILD_PATH
+      put -r .
+      quit
+      EOF
+
+# 阿里云39.104.56.101部署任务
+deploy_to_aliyun_101:
+  stage: deploy
+  image: linuxserver/openssh-server:version-8.4_p1-r3
+  # 依赖的job，获取该job下的 artifacts 文件
+  dependencies:
+    - build_dev
+  tags:
+    - ssh-runner
+  only:
+    refs:
+      - develop
+    variables:
+      - $DEPLOY_ALIYUN_101_PATH =~ /.{3}/
+  before_script:
+    # set ssh private key
+    - 'which ssh-agent || ( apt-get update -qy && apt-get install openssh-client -qqy )'
+    - eval $(ssh-agent -s) && ssh-add <(echo "$ALIYUN_101") && mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  script:
+    # 拷贝文件到远程服务器
+    - cd $BUILD_PATH
+    - scp -r -P 4166 * root@39.104.56.101:$DEPLOY_ALIYUN_101_PATH
+
+
+# 群聊机器人任务
+report:
+  stage: report
+  tags:
+    - shell-runner
+  only:
+    variables:
+      - $CI_COMMIT_MESSAGE =~ /(fix|deploy)/
+  script:
+    - >
+        curl $ROBOT_URL -H 'Content-Type: application/json' 
+        -d '
+        {
+          "msgtype":"markdown",
+          "markdown":{
+            "content":"'$PROJECT_DIR'已部署\n>提交内容:'"$DEPLOY_MSG"'\n>测试地址:'$PROJECT_DIR'"
+          }
+        }'

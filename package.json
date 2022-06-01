@@ -1,0 +1,31 @@
+{
+  "name": "@zsdev/zs-cli",
+  "version": "0.0.1",
+  "description": "Command line for zsdev",
+  "bin": {
+    "zs": "bin/zs.js"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "yqb",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^9.2.0",
+    "debug": "^4.3.4",
+    "ejs": "^3.1.8",
+    "fs-extra": "^10.1.0",
+    "inquirer": "^8.2.4",
+    "rxjs": "^6.6.7"
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://git.istrongcloud.net/zjzs-dev/8888888/zs-cli.git"
+  }
+}
