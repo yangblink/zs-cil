@@ -103,6 +103,7 @@ report:
   stage: report
   tags:
     - shell-runner
+  dependencies: []
   only:
     variables:
       - $CI_COMMIT_MESSAGE =~ /(fix|deploy)/
