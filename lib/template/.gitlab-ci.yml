@@ -66,7 +66,7 @@ deploy_to_150:
   script:
     # 拷贝文件到远程服务器
     - |
-      sftp -P 4401 istrong@192.168.1.150 <<EOF
+      sftp -P 4403 administrator@192.168.1.150 <<EOF
       cd $DEPLOY_WINDOWS_150_PATH
       lcd $BUILD_PATH
       put -r .
